@@ -1,111 +1,176 @@
-* {
-  box-sizing: border-box;
-  -webkit-tap-highlight-color: transparent;
+@import "tailwindcss";
+
+@theme {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  /* Theme Tokens (Light mode default) */
+  --color-app: #f4f4f2;
+  --color-main: #111113;
+  --color-muted: #8e8e93;
+  --color-dimmed: #bbbbbb;
+  --color-card: #ffffff;
+  --color-card-border: rgba(0, 0, 0, 0.04);
+  --color-badge: #f0f0ed;
+  --color-badge-text: #444444;
+  --color-badge-hover: #e5e5e1;
+  --color-badge-target: #eef7f2;
+  --color-badge-target-text: #15803d;
+  --color-badge-target-hover: #dcf1e5;
+  --color-converted: #15803d;
+  --color-copied-bg: #dcfce7;
+  --color-copied-text: #15803d;
+  --color-divider: rgba(0, 0, 0, 0.08);
+  --color-btn: #ffffff;
+  --color-btn-border: rgba(0, 0, 0, 0.08);
+  --color-btn-text: #555555;
+  --color-btn-hover: #f7f7f5;
+  --color-key: #ffffff;
+  --color-key-text: #111113;
+  --color-key-active: #e9e9e7;
+  --color-key-action: #deded9;
+  --color-key-action-text: #111113;
+  --color-key-action-active: #d0d0ca;
+  --color-sheet: #ffffff;
+  --color-sheet-backdrop: rgba(0, 0, 0, 0.35);
+  --color-input: #fafaf9;
+  --color-input-border: #dddddd;
+  --color-input-text: #111113;
+  --color-input-focus-border: #111113;
+  --color-input-focus-bg: #ffffff;
+  --color-save-btn: #111113;
+  --color-save-btn-text: #ffffff;
+  --color-handle: #dddddd;
+
+  --animate-fade-in: fadeIn 0.15s ease-out;
+  --animate-slide-up: slideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-banner-slide-down: bannerSlideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-toast-drop: toastDrop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  @keyframes bannerSlideDown {
+    from { opacity: 0; transform: translateY(-20px) scale(0.96); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @keyframes toastDrop {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 }
 
-:root {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
-    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  /* Light Theme Variables */
-  --bg-app: #f4f4f2;
-  --text-main: #111113;
-  --text-muted: #8e8e93;
-  --text-dimmed: #bbb;
-  --card-bg: #ffffff;
-  --card-border: rgba(0, 0, 0, 0.04);
-  --card-shadow: 0 2px 10px rgba(0, 0, 0, 0.035);
-  --badge-bg: #f0f0ed;
-  --badge-text: #444444;
-  --badge-hover-bg: #e5e5e1;
-  --badge-target-bg: #eef7f2;
-  --badge-target-text: #15803d;
-  --badge-target-hover-bg: #dcf1e5;
-  --converted-text: #15803d;
-  --copied-bg: #dcfce7;
-  --copied-text: #15803d;
-  --divider-color: rgba(0, 0, 0, 0.08);
-  --btn-bg: #ffffff;
-  --btn-border: rgba(0, 0, 0, 0.08);
-  --btn-text: #555555;
-  --btn-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-  --btn-hover-bg: #f7f7f5;
-  --key-bg: #ffffff;
-  --key-text: #111113;
-  --key-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-  --key-active-bg: #e9e9e7;
-  --key-action-bg: #deded9;
-  --key-action-text: #111113;
-  --key-action-active-bg: #d0d0ca;
-  --sheet-bg: #ffffff;
-  --sheet-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
-  --modal-backdrop: rgba(0, 0, 0, 0.35);
-  --input-bg: #fafaf9;
-  --input-border: #dddddd;
-  --input-text: #111113;
-  --input-focus-border: #111113;
-  --input-focus-bg: #ffffff;
-  --save-btn-bg: #111113;
-  --save-btn-text: #ffffff;
-  --handle-bg: #dddddd;
-}
-
+/* Explicit Dark Theme overrides on Tailwind theme tokens */
 [data-theme="dark"] {
-  /* Dark Theme Variables */
-  --bg-app: #0f0f12;
-  --text-main: #f3f4f6;
-  --text-muted: #8b8f9a;
-  --text-dimmed: #3e414c;
-  --card-bg: #18181d;
-  --card-border: rgba(255, 255, 255, 0.06);
-  --card-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  --badge-bg: #24242c;
-  --badge-text: #a1a1aa;
-  --badge-hover-bg: #2f2f38;
-  --badge-target-bg: #12281e;
-  --badge-target-text: #4ade80;
-  --badge-target-hover-bg: #183629;
-  --converted-text: #4ade80;
-  --copied-bg: #14532d;
-  --copied-text: #86efac;
-  --divider-color: rgba(255, 255, 255, 0.08);
-  --btn-bg: #18181d;
-  --btn-border: rgba(255, 255, 255, 0.08);
-  --btn-text: #d1d5db;
-  --btn-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-  --btn-hover-bg: #24242c;
-  --key-bg: #1a1a20;
-  --key-text: #f9fafb;
-  --key-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-  --key-active-bg: #292933;
-  --key-action-bg: #272730;
-  --key-action-text: #e5e7eb;
-  --key-action-active-bg: #353542;
-  --sheet-bg: #18181d;
-  --sheet-shadow: 0 -4px 30px rgba(0, 0, 0, 0.6);
-  --modal-backdrop: rgba(0, 0, 0, 0.65);
-  --input-bg: #121215;
-  --input-border: rgba(255, 255, 255, 0.12);
-  --input-text: #f9fafb;
-  --input-focus-border: #4ade80;
-  --input-focus-bg: #151519;
-  --save-btn-bg: #f9fafb;
-  --save-btn-text: #0f0f12;
-  --handle-bg: rgba(255, 255, 255, 0.18);
+  --color-app: #0f0f12;
+  --color-main: #f3f4f6;
+  --color-muted: #8b8f9a;
+  --color-dimmed: #3e414c;
+  --color-card: #18181d;
+  --color-card-border: rgba(255, 255, 255, 0.06);
+  --color-badge: #24242c;
+  --color-badge-text: #a1a1aa;
+  --color-badge-hover: #2f2f38;
+  --color-badge-target: #12281e;
+  --color-badge-target-text: #4ade80;
+  --color-badge-target-hover: #183629;
+  --color-converted: #4ade80;
+  --color-copied-bg: #14532d;
+  --color-copied-text: #86efac;
+  --color-divider: rgba(255, 255, 255, 0.08);
+  --color-btn: #18181d;
+  --color-btn-border: rgba(255, 255, 255, 0.08);
+  --color-btn-text: #d1d5db;
+  --color-btn-hover: #24242c;
+  --color-key: #1a1a20;
+  --color-key-text: #f9fafb;
+  --color-key-active: #292933;
+  --color-key-action: #272730;
+  --color-key-action-text: #e5e7eb;
+  --color-key-action-active: #353542;
+  --color-sheet: #18181d;
+  --color-sheet-backdrop: rgba(0, 0, 0, 0.65);
+  --color-input: #121215;
+  --color-input-border: rgba(255, 255, 255, 0.12);
+  --color-input-text: #f9fafb;
+  --color-input-focus-border: #4ade80;
+  --color-input-focus-bg: #151519;
+  --color-save-btn: #f9fafb;
+  --color-save-btn-text: #0f0f12;
+  --color-handle: rgba(255, 255, 255, 0.18);
 }
 
-html, body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  background: var(--bg-app);
-  color: var(--text-main);
-  overflow: hidden;
-  overscroll-behavior: none;
-  user-select: none;
-  -webkit-user-select: none;
-  transition: background-color 0.2s ease, color 0.2s ease;
+/* System Dark Mode Fallback */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-app: #0f0f12;
+    --color-main: #f3f4f6;
+    --color-muted: #8b8f9a;
+    --color-dimmed: #3e414c;
+    --color-card: #18181d;
+    --color-card-border: rgba(255, 255, 255, 0.06);
+    --color-badge: #24242c;
+    --color-badge-text: #a1a1aa;
+    --color-badge-hover: #2f2f38;
+    --color-badge-target: #12281e;
+    --color-badge-target-text: #4ade80;
+    --color-badge-target-hover: #183629;
+    --color-converted: #4ade80;
+    --color-copied-bg: #14532d;
+    --color-copied-text: #86efac;
+    --color-divider: rgba(255, 255, 255, 0.08);
+    --color-btn: #18181d;
+    --color-btn-border: rgba(255, 255, 255, 0.08);
+    --color-btn-text: #d1d5db;
+    --color-btn-hover: #24242c;
+    --color-key: #1a1a20;
+    --color-key-text: #f9fafb;
+    --color-key-active: #292933;
+    --color-key-action: #272730;
+    --color-key-action-text: #e5e7eb;
+    --color-key-action-active: #353542;
+    --color-sheet: #18181d;
+    --color-sheet-backdrop: rgba(0, 0, 0, 0.65);
+    --color-input: #121215;
+    --color-input-border: rgba(255, 255, 255, 0.12);
+    --color-input-text: #f9fafb;
+    --color-input-focus-border: #4ade80;
+    --color-input-focus-bg: #151519;
+    --color-save-btn: #f9fafb;
+    --color-save-btn-text: #0f0f12;
+    --color-handle: rgba(255, 255, 255, 0.18);
+  }
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html, body {
+    @apply m-0 p-0 h-full bg-app text-main overflow-hidden select-none font-sans antialiased;
+    overscroll-behavior: none;
+    text-rendering: optimizeLegibility;
+  }
+
+  main, #app {
+    @apply h-dvh max-w-[500px] mx-auto flex flex-col pt-[max(16px,env(safe-area-inset-top))] px-[18px] pb-[max(16px,env(safe-area-inset-bottom))];
+  }
+}
+
+@utility keypad {
+  @apply grid grid-cols-3 gap-2.5 shrink-0;
+
+  & > button {
+    @apply h-[min(14.5vw,70px)] min-h-[56px] border-0 rounded-[18px] bg-key text-key-text text-[27px] font-semibold flex items-center justify-center cursor-pointer shadow-xs select-none touch-manipulation transition-all active:scale-95 active:bg-key-active;
+
+    &[data-action="true"] {
+      @apply bg-key-action text-key-action-text active:bg-key-action-active text-[21px];
+    }
+  }
 }
