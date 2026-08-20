@@ -94,4 +94,4 @@ RatePad runs directly in your browser or installs natively on your home screen:
 
 ## Privacy & Security
 
-RatePad never sends your financial calculations or rate preferences across the web. All settings are stored strictly in your browser's private local storage.
+RatePad never sends your financial calculations or rate preferences across the web. All settings are stored strictly in your device.
