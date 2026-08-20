@@ -2,9 +2,11 @@
 
 > **The instant travel price & currency pad. Works 100% offline with custom rates, zero ads, and zero trackers.**
 
-[![PWA Ready](https://img.shields.io/badge/PWA-100%25_Offline-10b981?style=flat-square)](https://ratepad.pages.dev)
-[![Privacy First](https://img.shields.io/badge/Privacy-Zero_Tracking-3b82f6?style=flat-square)](https://ratepad.pages.dev)
-[![Lightweight](https://img.shields.io/badge/Size-%3C_30KB-purple?style=flat-square)](https://ratepad.pages.dev)
+[**🚀 Launch App → https://ratepad.oss.bd/**](https://ratepad.oss.bd/)
+
+[![PWA Ready](https://img.shields.io/badge/PWA-100%25_Offline-10b981?style=flat-square)](https://ratepad.oss.bd/)
+[![Privacy First](https://img.shields.io/badge/Privacy-Zero_Tracking-3b82f6?style=flat-square)](https://ratepad.oss.bd/)
+[![Lightweight](https://img.shields.io/badge/Size-%3C_30KB-purple?style=flat-square)](https://ratepad.oss.bd/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-gray?style=flat-square)](LICENSE)
 
 ---
