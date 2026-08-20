@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import InstallPrompt from './InstallPrompt.svelte'
-  import { pwa } from './pwaState.svelte'
+  import SettingsDrawer, { type ThemeMode } from './SettingsDrawer.svelte'
 
   // Pre-instantiated formatter for output conversion
   const convertedFormatter = new Intl.NumberFormat('en-US', {
@@ -37,8 +37,6 @@
     TO: 'ratepad_to',
     THEME: 'ratepad_theme'
   } as const
-
-  type ThemeMode = 'system' | 'light' | 'dark'
 
   let value = $state('')
   let rate = $state(120)
@@ -81,12 +79,6 @@
 
   let copyTimeout: ReturnType<typeof setTimeout> | undefined
   let backspaceTimer: ReturnType<typeof setTimeout> | undefined
-
-  // Form states for settings modal
-  let formFrom = $state('USD')
-  let formTo = $state('BDT')
-  let formRate = $state('120')
-  let formTheme = $state<ThemeMode>('system')
 
   // Derived numeric amount and formatted representations
   let amount = $derived(value ? Number(value) : 0)
@@ -281,31 +273,21 @@
   }
 
   function openSettings() {
-    formFrom = from
-    formTo = to
-    formRate = String(rate)
-    formTheme = themeMode
     isSettingsOpen = true
   }
 
-  function closeSettings() {
-    isSettingsOpen = false
-  }
-
-  function saveSettings(e?: SubmitEvent) {
-    if (e) e.preventDefault()
-    from = formFrom.trim().toUpperCase() || 'USD'
-    to = formTo.trim().toUpperCase() || 'BDT'
-    const parsedRate = Number(formRate)
-    rate = !isNaN(parsedRate) && parsedRate > 0 ? parsedRate : 1
-    themeMode = formTheme
+  function handleSaveSettings(newSettings: { from: string; to: string; rate: number; theme: ThemeMode }) {
+    from = newSettings.from
+    to = newSettings.to
+    rate = newSettings.rate
+    themeMode = newSettings.theme
     isSettingsOpen = false
 
     try {
       localStorage.setItem(STORAGE_KEYS.RATE, String(rate))
       localStorage.setItem(STORAGE_KEYS.FROM, from)
       localStorage.setItem(STORAGE_KEYS.TO, to)
-      localStorage.setItem(STORAGE_KEYS.THEME, formTheme)
+      localStorage.setItem(STORAGE_KEYS.THEME, themeMode)
     } catch {
       // Ignore localStorage write errors
     }
@@ -318,7 +300,7 @@
 
     if (isSettingsOpen) {
       if (e.key === 'Escape') {
-        closeSettings()
+        isSettingsOpen = false
       }
       return
     }
@@ -490,128 +472,14 @@
   {/each}
 </section>
 
-{#if isSettingsOpen}
-  <div
-    class="fixed inset-0 bg-sheet-backdrop flex items-end justify-center z-50 backdrop-blur-xs"
-    role="presentation"
-    onclick={(e) => {
-      if (e.target === e.currentTarget) closeSettings()
-    }}
-  >
-    <div
-      class="w-full max-w-[500px] bg-sheet text-main rounded-t-[28px] p-[22px] pb-[max(24px,env(safe-area-inset-bottom))] shadow-2xl animate-slide-up before:block before:w-[42px] before:h-[5px] before:bg-handle before:rounded-full before:mx-auto before:mb-5"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="settings-heading"
-    >
-      <h2 id="settings-heading" class="m-0 mb-5 text-2xl font-bold">Settings</h2>
-
-      <form onsubmit={saveSettings}>
-        <div class="mb-4">
-          <label for="fromInput" class="block text-[13px] text-muted font-semibold mb-[7px] tracking-wide">FROM CURRENCY</label>
-          <input
-            id="fromInput"
-            bind:value={formFrom}
-            maxlength="6"
-            autocomplete="off"
-            autocorrect="off"
-            spellcheck="false"
-            required
-            class="w-full border border-input-border rounded-[14px] p-[15px] text-[17px] outline-none font-sans bg-input text-input-text transition-colors focus:border-input-focus-border focus:bg-input-focus-bg"
-          />
-        </div>
-
-        <div class="mb-4">
-          <label for="toInput" class="block text-[13px] text-muted font-semibold mb-[7px] tracking-wide">TO CURRENCY</label>
-          <input
-            id="toInput"
-            bind:value={formTo}
-            maxlength="6"
-            autocomplete="off"
-            autocorrect="off"
-            spellcheck="false"
-            required
-            class="w-full border border-input-border rounded-[14px] p-[15px] text-[17px] outline-none font-sans bg-input text-input-text transition-colors focus:border-input-focus-border focus:bg-input-focus-bg"
-          />
-        </div>
-
-        <div class="mb-4">
-          <label for="rateInput" class="block text-[13px] text-muted font-semibold mb-[7px] tracking-wide">CONVERSION RATE</label>
-          <input
-            id="rateInput"
-            type="number"
-            inputmode="decimal"
-            bind:value={formRate}
-            step="any"
-            min="0.000001"
-            required
-            class="w-full border border-input-border rounded-[14px] p-[15px] text-[17px] outline-none font-sans bg-input text-input-text transition-colors focus:border-input-focus-border focus:bg-input-focus-bg"
-          />
-        </div>
-
-        <div class="mb-4">
-          <span class="block text-[13px] text-muted font-semibold mb-[7px] tracking-wide">THEME</span>
-          <div class="flex bg-input border border-input-border rounded-xl p-1 gap-1" role="radiogroup" aria-label="Appearance theme">
-            <button
-              type="button"
-              class="flex-1 h-[38px] border-0 rounded-lg text-sm font-semibold cursor-pointer font-sans touch-manipulation transition-all {formTheme === 'system' ? 'bg-card text-main shadow-xs' : 'bg-transparent text-muted'}"
-              onclick={() => { formTheme = 'system' }}
-            >
-              System
-            </button>
-            <button
-              type="button"
-              class="flex-1 h-[38px] border-0 rounded-lg text-sm font-semibold cursor-pointer font-sans touch-manipulation transition-all {formTheme === 'light' ? 'bg-card text-main shadow-xs' : 'bg-transparent text-muted'}"
-              onclick={() => { formTheme = 'light' }}
-            >
-              Light
-            </button>
-            <button
-              type="button"
-              class="flex-1 h-[38px] border-0 rounded-lg text-sm font-semibold cursor-pointer font-sans touch-manipulation transition-all {formTheme === 'dark' ? 'bg-card text-main shadow-xs' : 'bg-transparent text-muted'}"
-              onclick={() => { formTheme = 'dark' }}
-            >
-              Dark
-            </button>
-          </div>
-        </div>
-
-        <div class="mb-4">
-          <span class="block text-[13px] text-muted font-semibold mb-[7px] tracking-wide">APP INSTALLATION</span>
-          {#if pwa.isStandalone || pwa.isInstalled}
-            <div class="flex items-center justify-between gap-3 bg-badge-target border border-emerald-500/25 rounded-[14px] p-[12px_14px] text-[13px]">
-              <div class="size-[26px] rounded-full bg-converted text-white text-[13px] font-extrabold flex items-center justify-center shrink-0" aria-hidden="true">✓</div>
-              <div class="flex-1 min-w-0">
-                <strong class="block text-[13.5px] text-main mb-0.5">Installed (Offline Ready)</strong>
-                <p class="m-0 text-xs text-muted leading-snug">RatePad is installed and ready for full offline use.</p>
-              </div>
-            </div>
-          {:else}
-            <div class="flex items-center justify-between gap-3 bg-input border border-input-border rounded-[14px] p-[12px_14px] text-[13px]">
-              <div class="flex-1 min-w-0">
-                <strong class="block text-[13.5px] text-main mb-0.5">Install App</strong>
-                <p class="m-0 text-xs text-muted leading-snug">Add to your home screen for quick offline access.</p>
-              </div>
-              <button
-                type="button"
-                class="border-0 bg-save-btn text-save-btn-text text-[13px] font-bold py-2 px-3.5 rounded-xl cursor-pointer font-sans touch-manipulation whitespace-nowrap transition-transform active:scale-95"
-                onclick={() => {
-                  isSettingsOpen = false
-                  pwa.promptInstall()
-                }}
-              >
-                Install
-              </button>
-            </div>
-          {/if}
-        </div>
-
-        <button type="submit" class="w-full mt-2.5 h-[54px] border-0 rounded-2xl bg-save-btn text-save-btn-text font-bold text-[17px] cursor-pointer font-sans touch-manipulation transition-all active:scale-[0.98] active:opacity-90">
-          Save
-        </button>
-      </form>
-    </div>
-  </div>
-{/if}
+<SettingsDrawer
+  isOpen={isSettingsOpen}
+  {from}
+  {to}
+  {rate}
+  {themeMode}
+  onclose={() => { isSettingsOpen = false }}
+  onsave={handleSaveSettings}
+/>
 
 <InstallPrompt />
