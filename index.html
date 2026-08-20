@@ -5,6 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>RatePad — Travel Price & Currency Pad</title>
     <meta name="description" content="Convert foreign price tags in seconds. Works completely offline with custom rates, quick currency swapping, and zero fees or trackers." />
+
+    <!-- Set Initial Theme Immediately -->
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('ratepad_theme');
+          var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var isDark = saved === 'dark' || ((!saved || saved === 'system') && prefersDark);
+          var theme = isDark ? 'dark' : 'light';
+          document.documentElement.setAttribute('data-theme', theme);
+          document.documentElement.style.backgroundColor = isDark ? '#0f0f12' : '#f4f4f2';
+        } catch (e) {}
+      })();
+    </script>
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="/src/app.css" />
+
+    <!-- Theme Color -->
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0f0f12" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f4f4f2" />
     <meta name="theme-color" content="#f4f4f2" />
 
     <!-- Icons -->
@@ -13,13 +34,14 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-    <!-- iOS PWA Meta Tags -->
+    <!-- Mobile Web App / PWA Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="RatePad" />
   </head>
   <body>
-    <div id="app"></div>
+    <main id="app"></main>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
