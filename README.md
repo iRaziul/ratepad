@@ -1,27 +1,31 @@
-# RatePad
+# RatePad — Travel Price & Currency Pad
 
-A clean, minimalist currency converter built with Svelte 5 and Vite.
+> Convert foreign price tags in seconds. Works completely offline with custom rates, quick currency swapping, and zero fees or trackers.
+
+Travel smarter with **RatePad**, the pocket currency calculator built for international travelers, shoppers, and digital nomads. Set your bank or exchange booth rate once, and convert price tags in real time—even in remote areas or airplane mode.
 
 ## Features
 
-- Instant calculation with custom keypad
-- Configurable source and target currencies
-- Custom exchange rate setting with local persistence
-- Physical keyboard support (digits, backspace, clear)
-- Mobile-friendly safe area support
+- ⚡ **Instant Tactile Keypad:** Large numeric keypad with decimal support, live formatted display, and quick backspace.
+- 📴 **100% Offline PWA:** Installable standalone app that works anywhere with zero network dependency.
+- ⇄ **One-Tap Currency Swap:** Invert exchange rates and swap source/target currencies instantly (`S` key).
+- ⚙️ **Custom Exchange Rates:** Set precise conversion rates matching your actual credit card or exchange booth rate.
+- 🌗 **Light & Dark Mode:** Automatic OS theme detection + topbar quick toggle (`T` key).
+- 📋 **Tap to Copy:** Tap the converted price to copy it directly to your clipboard.
+- 🔒 **Zero Bloat & Private:** No ads, no analytics, no cookies, no tracking.
 
 ## Development
 
 ```bash
 # Install dependencies
-npm install
+bun install # or npm install
 
 # Start development server
-npm run dev
+bun run dev # or npm run dev
 
 # Type check
-npm run check
+bun run check # or npm run check
 
 # Build for production
-npm run build
+bun run build # or npm run build
 ```
