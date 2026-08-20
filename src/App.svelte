@@ -1,9 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte'
+  import InstallPrompt from './InstallPrompt.svelte'
+  import { pwa } from './pwaState.svelte'
 
   // Pre-instantiated formatter for output conversion
   const convertedFormatter = new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 2,
+    minimumFractionDigits: 0,
     maximumFractionDigits: 2
   })
 
@@ -46,9 +48,30 @@
   let copied = $state(false)
   let isSwapping = $state(false)
 
-  // Theme states
-  let themeMode = $state<ThemeMode>('system')
-  let systemPrefersDark = $state(false)
+  function getInitialTheme(): ThemeMode {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEYS.THEME) as ThemeMode | null
+        if (saved && ['system', 'light', 'dark'].includes(saved)) {
+          return saved
+        }
+      } catch {
+        // Ignore
+      }
+    }
+    return 'system'
+  }
+
+  function getInitialPrefersDark(): boolean {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches
+    }
+    return false
+  }
+
+  // Theme states (initialized synchronously to avoid any dark mode flash)
+  let themeMode = $state<ThemeMode>(getInitialTheme())
+  let systemPrefersDark = $state(getInitialPrefersDark())
 
   let activeTheme = $derived<'light' | 'dark'>(
     themeMode === 'system'
@@ -92,10 +115,13 @@
 
   function applyTheme(theme: 'light' | 'dark') {
     if (typeof document !== 'undefined') {
+      const isDark = theme === 'dark'
       document.documentElement.setAttribute('data-theme', theme)
+      document.documentElement.style.backgroundColor = isDark ? '#0f0f12' : '#f4f4f2'
+      document.documentElement.style.color = isDark ? '#f3f4f6' : '#111113'
       const metaThemeColor = document.querySelector('meta[name="theme-color"]')
       if (metaThemeColor) {
-        metaThemeColor.setAttribute('content', theme === 'dark' ? '#0f0f12' : '#f4f4f2')
+        metaThemeColor.setAttribute('content', isDark ? '#0f0f12' : '#f4f4f2')
       }
     }
   }
@@ -240,7 +266,7 @@
   }
 
   async function copyConverted() {
-    const rawVal = (amount * rate).toFixed(2)
+    const rawVal = Number((amount * rate).toFixed(2)).toString()
     try {
       await navigator.clipboard.writeText(rawVal)
       vibrate(12)
@@ -315,181 +341,174 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<main class="app">
-  <header class="topbar">
-    <div class="logo">RatePad</div>
-    <div class="topbar-actions">
-      <button
-        type="button"
-        class="icon-btn theme-toggle"
-        onclick={toggleQuickTheme}
-        aria-label="Toggle {activeTheme === 'dark' ? 'Light' : 'Dark'} theme (Press T)"
-        title="Toggle {activeTheme === 'dark' ? 'Light' : 'Dark'} mode"
-      >
-        {#if activeTheme === 'dark'}
-          <!-- Sun icon -->
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="5"/>
-            <line x1="12" y1="1" x2="12" y2="3"/>
-            <line x1="12" y1="21" x2="12" y2="23"/>
-            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-            <line x1="1" y1="12" x2="3" y2="12"/>
-            <line x1="21" y1="12" x2="23" y2="12"/>
-            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-          </svg>
-        {:else}
-          <!-- Moon icon -->
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-          </svg>
-        {/if}
-      </button>
-
-      <button
-        type="button"
-        class="icon-btn settings-btn"
-        onclick={openSettings}
-        aria-label="Open conversion settings"
-        title="Settings"
-      >
-        ⚙
-      </button>
-    </div>
-  </header>
-
-  <section class="display" aria-live="polite">
-    <!-- Input Card -->
-    <div class="amount-card input-card">
-      <div class="card-header">
-        <button
-          type="button"
-          class="currency-badge"
-          onclick={openSettings}
-          title="Click to edit currency"
-        >
-          {from}
-        </button>
-
-        {#if value}
-          <button
-            type="button"
-            class="clear-mini-btn"
-            onclick={clearAmount}
-            aria-label="Clear entered amount"
-            title="Clear amount (Press C)"
-          >
-            ✕
-          </button>
-        {/if}
-      </div>
-
-      <div class="amount-row entered" title="{formattedInput} {from}">
-        <span class="value-text" class:dimmed={!value}>{formattedInput}</span>
-      </div>
-    </div>
-
-    <!-- Divider with Swap Action -->
-    <div class="divider-section">
-      <div class="divider-line"></div>
-      <button
-        type="button"
-        class="swap-btn"
-        class:spinning={isSwapping}
-        onclick={swapCurrencies}
-        aria-label="Swap currencies"
-        title="Swap currencies (Press S)"
-      >
-        <svg class="swap-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M7 16V4m0 0L3 8m4-4l4 4m6 4v12m0 0l4-4m-4 4l-4-4"/>
-        </svg>
-      </button>
-      <div class="divider-line"></div>
-    </div>
-
-    <!-- Output Card -->
-    <div
-      class="amount-card output-card"
-      role="button"
-      tabindex="0"
-      onclick={copyConverted}
-      onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') copyConverted() }}
-      title="Click to copy amount"
+<header class="flex items-center justify-between h-12 shrink-0">
+  <h1 class="text-xl font-[750] tracking-[-0.5px] text-main m-0">RatePad</h1>
+  <div class="flex items-center gap-2">
+    <button
+      type="button"
+      class="size-10 rounded-full border border-btn-border bg-btn text-btn-text shadow-xs flex items-center justify-center cursor-pointer touch-manipulation transition-all hover:bg-btn-hover hover:text-main active:scale-90 text-[19px]"
+      onclick={toggleQuickTheme}
+      aria-label="Toggle {activeTheme === 'dark' ? 'Light' : 'Dark'} theme (Press T)"
+      title="Toggle {activeTheme === 'dark' ? 'Light' : 'Dark'} mode"
     >
-      <div class="card-header">
-        <button
-          type="button"
-          class="currency-badge target"
-          onclick={(e) => { e.stopPropagation(); openSettings() }}
-          title="Click to edit currency"
-        >
-          {to}
-        </button>
-        {#if copied}
-          <span class="copied-pill">Copied!</span>
-        {/if}
-      </div>
-
-      <div class="amount-row converted" title="{formattedConverted} {to}">
-        <span class="value-text">{formattedConverted}</span>
-      </div>
-
-      <div class="rate-bar">
-        <span>1 {from} = {rate} {to}</span>
-      </div>
-    </div>
-  </section>
-
-  <section class="keypad" aria-label="Keypad">
-    {#each KEYS as key (key.label)}
-      {#if key.action === 'backspace'}
-        <button
-          type="button"
-          class="key action"
-          onpointerdown={handleBackspaceStart}
-          onpointerup={handleBackspaceEnd}
-          onpointerleave={handleBackspaceEnd}
-          aria-label="Backspace (Hold to clear)"
-          title="Backspace (Hold to clear)"
-        >
-          {key.label}
-        </button>
+      {#if activeTheme === 'dark'}
+        <!-- Sun icon -->
+        <svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/>
+          <line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/>
+          <line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
       {:else}
+        <!-- Moon icon -->
+        <svg class="size-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      {/if}
+    </button>
+
+    <button
+      type="button"
+      class="size-10 rounded-full border border-btn-border bg-btn text-btn-text shadow-xs flex items-center justify-center cursor-pointer touch-manipulation transition-all hover:bg-btn-hover hover:text-main active:scale-90 text-[19px]"
+      onclick={openSettings}
+      aria-label="Open conversion settings"
+      title="Settings"
+    >
+      ⚙
+    </button>
+  </div>
+</header>
+
+<section class="flex-1 flex flex-col justify-center gap-2 min-h-0 py-3" aria-live="polite">
+  <!-- Input Card (Flattened DOM) -->
+  <div class="bg-card rounded-[20px] p-[14px_18px] shadow-sm border border-card-border flex flex-col justify-center transition-all">
+    <div class="flex items-center justify-between min-h-6 mb-1.5">
+      <button
+        type="button"
+        class="border-0 bg-badge text-badge-text text-[13px] font-bold py-[3px] px-[9px] rounded-lg cursor-pointer font-sans transition-colors hover:bg-badge-hover hover:text-main"
+        onclick={openSettings}
+        title="Click to edit currency"
+      >
+        {from}
+      </button>
+
+      {#if value}
         <button
           type="button"
-          class="key"
-          class:action={key.isAction}
-          onclick={() => handleKey(key)}
-          aria-label={key.label === '.' ? 'Decimal point' : key.label}
+          class="size-[22px] rounded-full border-0 bg-badge text-muted text-[11px] font-bold flex items-center justify-center cursor-pointer touch-manipulation transition-colors hover:bg-badge-hover hover:text-main"
+          onclick={clearAmount}
+          aria-label="Clear entered amount"
+          title="Clear amount (Press C)"
         >
-          {key.label}
+          ✕
         </button>
       {/if}
-    {/each}
-  </section>
-</main>
+    </div>
+
+    <div class="flex items-baseline tabular-nums leading-tight overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(34px,10vw,54px)] font-bold tracking-[-1.5px] transition-colors {value ? 'text-main' : 'text-dimmed'}" title="{formattedInput} {from}">
+      {formattedInput}
+    </div>
+  </div>
+
+  <!-- Divider with Swap Action (Flattened: pseudo before/after replaces 2 line divs) -->
+  <div class="flex items-center justify-center relative py-0.5 before:flex-1 before:h-px before:bg-divider after:flex-1 after:h-px after:bg-divider">
+    <button
+      type="button"
+      class="size-8 rounded-full border border-btn-border bg-btn text-btn-text flex items-center justify-center mx-2.5 cursor-pointer shadow-xs touch-manipulation transition-all hover:bg-btn-hover hover:text-main active:scale-90"
+      onclick={swapCurrencies}
+      aria-label="Swap currencies"
+      title="Swap currencies (Press S)"
+    >
+      <svg class="size-4 transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] {isSwapping ? 'rotate-180' : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7 16V4m0 0L3 8m4-4l4 4m6 4v12m0 0l4-4m-4 4l-4-4"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Output Card (Flattened DOM) -->
+  <div
+    class="bg-card rounded-[20px] p-[14px_18px] shadow-sm border border-card-border flex flex-col justify-center transition-all cursor-pointer active:scale-[0.99]"
+    role="button"
+    tabindex="0"
+    onclick={copyConverted}
+    onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') copyConverted() }}
+    title="Click to copy amount"
+  >
+    <div class="flex items-center justify-between min-h-6 mb-1.5">
+      <button
+        type="button"
+        class="border-0 bg-badge-target text-badge-target-text text-[13px] font-bold py-[3px] px-[9px] rounded-lg cursor-pointer font-sans transition-colors hover:bg-badge-target-hover"
+        onclick={(e) => { e.stopPropagation(); openSettings() }}
+        title="Click to edit currency"
+      >
+        {to}
+      </button>
+      {#if copied}
+        <span class="text-[11px] font-bold text-copied-text bg-copied-bg py-0.5 px-[7px] rounded-md animate-fade-in">Copied!</span>
+      {/if}
+    </div>
+
+    <div class="flex items-baseline tabular-nums leading-tight overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(32px,9.5vw,50px)] font-[750] tracking-[-1.2px] text-converted" title="{formattedConverted} {to}">
+      {formattedConverted}
+    </div>
+
+    <div class="mt-1.5 text-muted text-xs font-medium">
+      1 {from} = {rate} {to}
+    </div>
+  </div>
+</section>
+
+<section class="keypad" aria-label="Keypad">
+  {#each KEYS as key (key.label)}
+    {#if key.action === 'backspace'}
+      <button
+        type="button"
+        data-action="true"
+        onpointerdown={handleBackspaceStart}
+        onpointerup={handleBackspaceEnd}
+        onpointerleave={handleBackspaceEnd}
+        aria-label="Backspace (Hold to clear)"
+        title="Backspace (Hold to clear)"
+      >
+        {key.label}
+      </button>
+    {:else}
+      <button
+        type="button"
+        data-action={key.isAction ? 'true' : undefined}
+        onclick={() => handleKey(key)}
+        aria-label={key.label === '.' ? 'Decimal point' : key.label}
+      >
+        {key.label}
+      </button>
+    {/if}
+  {/each}
+</section>
 
 {#if isSettingsOpen}
   <div
-    class="settings-panel"
+    class="fixed inset-0 bg-sheet-backdrop flex items-end justify-center z-50 backdrop-blur-xs"
     role="presentation"
     onclick={(e) => {
       if (e.target === e.currentTarget) closeSettings()
     }}
   >
     <div
-      class="sheet"
+      class="w-full max-w-[500px] bg-sheet text-main rounded-t-[28px] p-[22px] pb-[max(24px,env(safe-area-inset-bottom))] shadow-2xl animate-slide-up before:block before:w-[42px] before:h-[5px] before:bg-handle before:rounded-full before:mx-auto before:mb-5"
       role="dialog"
       aria-modal="true"
       aria-labelledby="settings-heading"
     >
-      <div class="handle" aria-hidden="true"></div>
-      <h2 id="settings-heading">Settings</h2>
+      <h2 id="settings-heading" class="m-0 mb-5 text-2xl font-bold">Settings</h2>
 
       <form onsubmit={saveSettings}>
-        <div class="field">
-          <label for="fromInput">FROM CURRENCY</label>
+        <div class="mb-4">
+          <label for="fromInput" class="block text-[13px] text-muted font-semibold mb-[7px] tracking-wide">FROM CURRENCY</label>
           <input
             id="fromInput"
             bind:value={formFrom}
@@ -498,11 +517,12 @@
             autocorrect="off"
             spellcheck="false"
             required
+            class="w-full border border-input-border rounded-[14px] p-[15px] text-[17px] outline-none font-sans bg-input text-input-text transition-colors focus:border-input-focus-border focus:bg-input-focus-bg"
           />
         </div>
 
-        <div class="field">
-          <label for="toInput">TO CURRENCY</label>
+        <div class="mb-4">
+          <label for="toInput" class="block text-[13px] text-muted font-semibold mb-[7px] tracking-wide">TO CURRENCY</label>
           <input
             id="toInput"
             bind:value={formTo}
@@ -511,11 +531,12 @@
             autocorrect="off"
             spellcheck="false"
             required
+            class="w-full border border-input-border rounded-[14px] p-[15px] text-[17px] outline-none font-sans bg-input text-input-text transition-colors focus:border-input-focus-border focus:bg-input-focus-bg"
           />
         </div>
 
-        <div class="field">
-          <label for="rateInput">CONVERSION RATE</label>
+        <div class="mb-4">
+          <label for="rateInput" class="block text-[13px] text-muted font-semibold mb-[7px] tracking-wide">CONVERSION RATE</label>
           <input
             id="rateInput"
             type="number"
@@ -524,32 +545,30 @@
             step="any"
             min="0.000001"
             required
+            class="w-full border border-input-border rounded-[14px] p-[15px] text-[17px] outline-none font-sans bg-input text-input-text transition-colors focus:border-input-focus-border focus:bg-input-focus-bg"
           />
         </div>
 
-        <div class="field">
-          <span class="field-label">THEME</span>
-          <div class="theme-segmented-control" role="radiogroup" aria-label="Appearance theme">
+        <div class="mb-4">
+          <span class="block text-[13px] text-muted font-semibold mb-[7px] tracking-wide">THEME</span>
+          <div class="flex bg-input border border-input-border rounded-xl p-1 gap-1" role="radiogroup" aria-label="Appearance theme">
             <button
               type="button"
-              class="theme-segment"
-              class:selected={formTheme === 'system'}
+              class="flex-1 h-[38px] border-0 rounded-lg text-sm font-semibold cursor-pointer font-sans touch-manipulation transition-all {formTheme === 'system' ? 'bg-card text-main shadow-xs' : 'bg-transparent text-muted'}"
               onclick={() => { formTheme = 'system' }}
             >
               System
             </button>
             <button
               type="button"
-              class="theme-segment"
-              class:selected={formTheme === 'light'}
+              class="flex-1 h-[38px] border-0 rounded-lg text-sm font-semibold cursor-pointer font-sans touch-manipulation transition-all {formTheme === 'light' ? 'bg-card text-main shadow-xs' : 'bg-transparent text-muted'}"
               onclick={() => { formTheme = 'light' }}
             >
               Light
             </button>
             <button
               type="button"
-              class="theme-segment"
-              class:selected={formTheme === 'dark'}
+              class="flex-1 h-[38px] border-0 rounded-lg text-sm font-semibold cursor-pointer font-sans touch-manipulation transition-all {formTheme === 'dark' ? 'bg-card text-main shadow-xs' : 'bg-transparent text-muted'}"
               onclick={() => { formTheme = 'dark' }}
             >
               Dark
@@ -557,7 +576,37 @@
           </div>
         </div>
 
-        <button type="submit" class="save">
+        <div class="mb-4">
+          <span class="block text-[13px] text-muted font-semibold mb-[7px] tracking-wide">APP INSTALLATION</span>
+          {#if pwa.isStandalone || pwa.isInstalled}
+            <div class="flex items-center justify-between gap-3 bg-badge-target border border-emerald-500/25 rounded-[14px] p-[12px_14px] text-[13px]">
+              <div class="size-[26px] rounded-full bg-converted text-white text-[13px] font-extrabold flex items-center justify-center shrink-0" aria-hidden="true">✓</div>
+              <div class="flex-1 min-w-0">
+                <strong class="block text-[13.5px] text-main mb-0.5">Installed (Offline Ready)</strong>
+                <p class="m-0 text-xs text-muted leading-snug">RatePad is installed and ready for full offline use.</p>
+              </div>
+            </div>
+          {:else}
+            <div class="flex items-center justify-between gap-3 bg-input border border-input-border rounded-[14px] p-[12px_14px] text-[13px]">
+              <div class="flex-1 min-w-0">
+                <strong class="block text-[13.5px] text-main mb-0.5">Install App</strong>
+                <p class="m-0 text-xs text-muted leading-snug">Add to your home screen for quick offline access.</p>
+              </div>
+              <button
+                type="button"
+                class="border-0 bg-save-btn text-save-btn-text text-[13px] font-bold py-2 px-3.5 rounded-xl cursor-pointer font-sans touch-manipulation whitespace-nowrap transition-transform active:scale-95"
+                onclick={() => {
+                  isSettingsOpen = false
+                  pwa.promptInstall()
+                }}
+              >
+                Install
+              </button>
+            </div>
+          {/if}
+        </div>
+
+        <button type="submit" class="w-full mt-2.5 h-[54px] border-0 rounded-2xl bg-save-btn text-save-btn-text font-bold text-[17px] cursor-pointer font-sans touch-manipulation transition-all active:scale-[0.98] active:opacity-90">
           Save
         </button>
       </form>
@@ -565,429 +614,4 @@
   </div>
 {/if}
 
-<style>
-  .app {
-    height: 100dvh;
-    max-width: 500px;
-    margin: auto;
-    display: flex;
-    flex-direction: column;
-    padding:
-      max(16px, env(safe-area-inset-top))
-      18px
-      max(16px, env(safe-area-inset-bottom));
-  }
-
-  .topbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 48px;
-    flex-shrink: 0;
-  }
-
-  .logo {
-    font-size: 20px;
-    font-weight: 750;
-    letter-spacing: -0.5px;
-    color: var(--text-main);
-  }
-
-  .topbar-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .icon-btn {
-    border: 1px solid var(--btn-border);
-    background: var(--btn-bg);
-    color: var(--btn-text);
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    font-size: 19px;
-    cursor: pointer;
-    box-shadow: var(--btn-shadow);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    touch-action: manipulation;
-    transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-  }
-
-  .icon-btn:hover {
-    background: var(--btn-hover-bg);
-    color: var(--text-main);
-  }
-
-  .icon-btn:active {
-    transform: scale(0.92);
-  }
-
-  /* Display Area */
-  .display {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 8px;
-    min-height: 0;
-    padding: 12px 0 20px;
-  }
-
-  .amount-card {
-    background: var(--card-bg);
-    border-radius: 20px;
-    padding: 14px 18px;
-    box-shadow: var(--card-shadow);
-    border: 1px solid var(--card-border);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.2s ease, border-color 0.2s ease;
-  }
-
-  .output-card {
-    cursor: pointer;
-  }
-
-  .output-card:hover {
-    box-shadow: var(--card-shadow);
-  }
-
-  .output-card:active {
-    transform: scale(0.99);
-  }
-
-  .card-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    min-height: 24px;
-    margin-bottom: 6px;
-  }
-
-  .currency-badge {
-    border: 0;
-    background: var(--badge-bg);
-    color: var(--badge-text);
-    font-size: 13px;
-    font-weight: 700;
-    padding: 3px 9px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-family: inherit;
-    transition: background-color 0.15s ease, color 0.15s ease;
-  }
-
-  .currency-badge:hover {
-    background: var(--badge-hover-bg);
-    color: var(--text-main);
-  }
-
-  .currency-badge.target {
-    background: var(--badge-target-bg);
-    color: var(--badge-target-text);
-  }
-
-  .currency-badge.target:hover {
-    background: var(--badge-target-hover-bg);
-  }
-
-  .clear-mini-btn {
-    border: 0;
-    background: var(--badge-bg);
-    color: var(--text-muted);
-    font-size: 11px;
-    font-weight: 700;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    touch-action: manipulation;
-    transition: background-color 0.15s ease, color 0.15s ease;
-  }
-
-  .clear-mini-btn:hover {
-    background: var(--badge-hover-bg);
-    color: var(--text-main);
-  }
-
-  .copied-pill {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--copied-text);
-    background: var(--copied-bg);
-    padding: 2px 7px;
-    border-radius: 6px;
-    animation: fadeIn 0.15s ease-out;
-  }
-
-  @keyframes fadeIn {
-    from { opacity: 0; transform: scale(0.9); }
-    to { opacity: 1; transform: scale(1); }
-  }
-
-  .amount-row {
-    display: flex;
-    align-items: baseline;
-    font-variant-numeric: tabular-nums;
-    line-height: 1.1;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .entered {
-    font-size: clamp(34px, 10vw, 54px);
-    font-weight: 700;
-    letter-spacing: -1.5px;
-    color: var(--text-main);
-  }
-
-  .entered .dimmed {
-    color: var(--text-dimmed);
-  }
-
-  .converted {
-    font-size: clamp(32px, 9.5vw, 50px);
-    font-weight: 750;
-    letter-spacing: -1.2px;
-    color: var(--converted-text);
-  }
-
-  .rate-bar {
-    margin-top: 6px;
-    color: var(--text-muted);
-    font-size: 12px;
-    font-weight: 500;
-  }
-
-  /* Divider Section with Swap Button */
-  .divider-section {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    padding: 2px 0;
-  }
-
-  .divider-line {
-    flex: 1;
-    height: 1px;
-    background: var(--divider-color);
-  }
-
-  .swap-btn {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    border: 1px solid var(--btn-border);
-    background: var(--btn-bg);
-    color: var(--btn-text);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 10px;
-    cursor: pointer;
-    box-shadow: var(--btn-shadow);
-    touch-action: manipulation;
-    transition: transform 0.2s ease, background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
-  }
-
-  .swap-btn:hover {
-    background: var(--btn-hover-bg);
-    color: var(--text-main);
-  }
-
-  .swap-btn:active {
-    transform: scale(0.9);
-  }
-
-  .swap-btn.spinning .swap-icon {
-    transform: rotate(180deg);
-  }
-
-  .swap-icon {
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
-
-  /* Keypad */
-  .keypad {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    flex-shrink: 0;
-  }
-
-  .key {
-    height: min(14.5vw, 70px);
-    min-height: 56px;
-    border: 0;
-    border-radius: 18px;
-    background: var(--key-bg);
-    color: var(--key-text);
-    font-size: 27px;
-    font-weight: 600;
-    cursor: pointer;
-    box-shadow: var(--key-shadow);
-    font-family: inherit;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    touch-action: manipulation;
-    user-select: none;
-    -webkit-user-select: none;
-    transition: transform 0.08s ease, background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
-  }
-
-  .key:active {
-    transform: scale(0.95);
-    background: var(--key-active-bg);
-  }
-
-  .key.action {
-    background: var(--key-action-bg);
-    color: var(--key-action-text);
-    font-size: 21px;
-  }
-
-  .key.action:active {
-    background: var(--key-action-active-bg);
-  }
-
-  /* Settings Modal */
-  .settings-panel {
-    position: fixed;
-    inset: 0;
-    background: var(--modal-backdrop);
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    z-index: 100;
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
-  }
-
-  .sheet {
-    width: 100%;
-    max-width: 500px;
-    background: var(--sheet-bg);
-    color: var(--text-main);
-    border-radius: 28px 28px 0 0;
-    padding: 22px;
-    padding-bottom: max(24px, env(safe-area-inset-bottom));
-    box-shadow: var(--sheet-shadow);
-    animation: slideUp 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  @keyframes slideUp {
-    from {
-      transform: translateY(100%);
-    }
-    to {
-      transform: translateY(0);
-    }
-  }
-
-  .handle {
-    width: 42px;
-    height: 5px;
-    background: var(--handle-bg);
-    border-radius: 10px;
-    margin: 0 auto 22px;
-  }
-
-  .sheet h2 {
-    margin: 0 0 20px;
-    font-size: 24px;
-    font-weight: 700;
-  }
-
-  .field {
-    margin-bottom: 16px;
-  }
-
-  .field label, .field-label {
-    display: block;
-    font-size: 13px;
-    color: var(--text-muted);
-    font-weight: 600;
-    margin-bottom: 7px;
-    letter-spacing: 0.3px;
-  }
-
-  .field input {
-    width: 100%;
-    border: 1px solid var(--input-border);
-    border-radius: 14px;
-    padding: 15px;
-    font-size: 17px;
-    outline: none;
-    font-family: inherit;
-    background: var(--input-bg);
-    color: var(--input-text);
-    transition: border-color 0.15s ease, background-color 0.15s ease;
-  }
-
-  .field input:focus {
-    border-color: var(--input-focus-border);
-    background: var(--input-focus-bg);
-  }
-
-  /* Segmented Theme Picker */
-  .theme-segmented-control {
-    display: flex;
-    background: var(--input-bg);
-    border: 1px solid var(--input-border);
-    border-radius: 12px;
-    padding: 4px;
-    gap: 4px;
-  }
-
-  .theme-segment {
-    flex: 1;
-    height: 38px;
-    border: 0;
-    background: transparent;
-    color: var(--text-muted);
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    font-family: inherit;
-    touch-action: manipulation;
-    transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
-  }
-
-  .theme-segment.selected {
-    background: var(--card-bg);
-    color: var(--text-main);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-  }
-
-  .save {
-    width: 100%;
-    margin-top: 10px;
-    height: 54px;
-    border: 0;
-    border-radius: 16px;
-    background: var(--save-btn-bg);
-    color: var(--save-btn-text);
-    font-weight: 700;
-    font-size: 17px;
-    cursor: pointer;
-    font-family: inherit;
-    touch-action: manipulation;
-    transition: transform 0.08s ease, opacity 0.15s ease;
-  }
-
-  .save:active {
-    transform: scale(0.98);
-    opacity: 0.9;
-  }
-</style>
+<InstallPrompt />
