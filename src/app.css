@@ -164,13 +164,17 @@
 }
 
 @utility keypad {
-  @apply grid grid-cols-3 gap-2.5 shrink-0;
+  @apply grid grid-cols-4 gap-2 shrink-0;
 
   & > button {
-    @apply h-[min(14.5vw,70px)] min-h-[56px] border-0 rounded-[18px] bg-key text-key-text text-[27px] font-semibold flex items-center justify-center cursor-pointer shadow-xs select-none touch-manipulation transition-all active:scale-95 active:bg-key-active;
+    @apply h-[min(13.5vw,64px)] min-h-[50px] border-0 rounded-[16px] bg-key text-key-text text-[24px] font-semibold flex items-center justify-center cursor-pointer shadow-xs select-none touch-manipulation transition-all active:scale-95 active:bg-key-active;
 
     &[data-action="true"] {
-      @apply bg-key-action text-key-action-text active:bg-key-action-active text-[21px];
+      @apply bg-key-action text-key-action-text active:bg-key-action-active text-[20px];
+    }
+
+    &[data-op="true"] {
+      @apply bg-key-action text-key-action-text active:bg-key-action-active text-[23px] font-medium;
     }
   }
 }

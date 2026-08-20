@@ -2,6 +2,14 @@
   import { onMount } from 'svelte'
   import InstallPrompt from './InstallPrompt.svelte'
   import SettingsDrawer, { type ThemeMode } from './SettingsDrawer.svelte'
+  import {
+    evaluateExpression,
+    formatExpression,
+    appendInput,
+    backspaceInput,
+    collapseExpression,
+    hasCalculation
+  } from './calc'
 
   // Pre-instantiated formatter for output conversion
   const convertedFormatter = new Intl.NumberFormat('en-US', {
@@ -14,21 +22,29 @@
     value?: string
     action?: 'clear' | 'backspace'
     isAction?: boolean
+    isOp?: boolean
   }
 
   const KEYS: readonly KeyDef[] = [
     { label: '1', value: '1' },
     { label: '2', value: '2' },
     { label: '3', value: '3' },
+    { label: '÷', value: '÷', isOp: true },
+
     { label: '4', value: '4' },
     { label: '5', value: '5' },
     { label: '6', value: '6' },
+    { label: '×', value: '×', isOp: true },
+
     { label: '7', value: '7' },
     { label: '8', value: '8' },
     { label: '9', value: '9' },
+    { label: '−', value: '-', isOp: true },
+
     { label: '.', value: '.' },
     { label: '0', value: '0' },
-    { label: '⌫', action: 'backspace', isAction: true }
+    { label: '⌫', action: 'backspace', isAction: true },
+    { label: '+', value: '+', isOp: true }
   ] as const
 
   const STORAGE_KEYS = {
@@ -81,18 +97,10 @@
   let backspaceTimer: ReturnType<typeof setTimeout> | undefined
 
   // Derived numeric amount and formatted representations
-  let amount = $derived(value ? Number(value) : 0)
-
-  let formattedInput = $derived.by(() => {
-    if (!value) return '0'
-    const parts = value.split('.')
-    const intFormatted = Number(parts[0] || '0').toLocaleString('en-US')
-    if (parts.length > 1) {
-      return `${intFormatted}.${parts[1]}`
-    }
-    return intFormatted
-  })
-
+  let amount = $derived(evaluateExpression(value))
+  let isCalculating = $derived(hasCalculation(value))
+  let calculatedTotalFormatted = $derived(convertedFormatter.format(amount))
+  let formattedInput = $derived(formatExpression(value))
   let formattedConverted = $derived(convertedFormatter.format(amount * rate))
 
   function vibrate(ms = 6) {
@@ -169,33 +177,8 @@
   }
 
   function press(char: string) {
-    if (char === '.') {
-      if (value.includes('.')) return
-      vibrate()
-      if (value === '') {
-        value = '0.'
-      } else {
-        value += '.'
-      }
-      return
-    }
-
-    if (value.length >= 12) return
-
-    // Limit to 2 decimal places when typing decimals
-    if (value.includes('.')) {
-      const parts = value.split('.')
-      if (parts[1] && parts[1].length >= 2) return
-    }
-
-    if (value === '0' && char === '0') return
-
     vibrate()
-    if (value === '0') {
-      value = char
-      return
-    }
-    value += char
+    value = appendInput(value, char)
   }
 
   function clearAmount() {
@@ -208,7 +191,14 @@
   function backspace() {
     if (value.length > 0) {
       vibrate()
-      value = value.slice(0, -1)
+      value = backspaceInput(value)
+    }
+  }
+
+  function handleEquals() {
+    if (hasCalculation(value)) {
+      vibrate(10)
+      value = collapseExpression(value)
     }
   }
 
@@ -309,6 +299,10 @@
       press(e.key)
     } else if (e.key === '.' || e.key === ',') {
       press('.')
+    } else if (e.key === '+' || e.key === '-' || e.key === '*' || e.key === '/' || e.key === 'x' || e.key === 'X') {
+      press(e.key)
+    } else if (e.key === 'Enter' || e.key === '=') {
+      handleEquals()
     } else if (e.key === 'Backspace') {
       backspace()
     } else if (e.key.toLowerCase() === 'c' || e.key === 'Escape' || e.key === 'Delete') {
@@ -392,8 +386,21 @@
       {/if}
     </div>
 
-    <div class="flex items-baseline tabular-nums leading-tight overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(34px,10vw,54px)] font-bold tracking-[-1.5px] transition-colors {value ? 'text-main' : 'text-dimmed'}" title="{formattedInput} {from}">
+    <div class="flex items-baseline tabular-nums leading-tight overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(32px,9vw,52px)] font-bold tracking-[-1.2px] transition-colors {value ? 'text-main' : 'text-dimmed'}" title="{formattedInput} {from}">
       {formattedInput}
+    </div>
+
+    <div class="mt-1.5 text-muted text-xs font-medium h-4 flex items-center">
+      {#if isCalculating}
+        <button
+          type="button"
+          class="border-0 bg-transparent p-0 text-muted hover:text-main text-xs font-medium cursor-pointer font-sans tabular-nums transition-colors animate-fade-in"
+          onclick={handleEquals}
+          title="Click to collapse calculation (or press Enter)"
+        >
+          {calculatedTotalFormatted}
+        </button>
+      {/if}
     </div>
   </div>
 
@@ -439,7 +446,7 @@
       {formattedConverted}
     </div>
 
-    <div class="mt-1.5 text-muted text-xs font-medium">
+    <div class="mt-1.5 text-muted text-xs font-medium h-4 flex items-center">
       1 {from} = {rate} {to}
     </div>
   </div>
@@ -463,6 +470,7 @@
       <button
         type="button"
         data-action={key.isAction ? 'true' : undefined}
+        data-op={key.isOp ? 'true' : undefined}
         onclick={() => handleKey(key)}
         aria-label={key.label === '.' ? 'Decimal point' : key.label}
       >
